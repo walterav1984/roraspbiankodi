@@ -20,13 +20,13 @@ curl -o https://raw.githubusercontent.com/walterav1984/roraspbiankodi/master/rrk
 #make script executable
 chmod +x rrk.sh
 
-#run first automated step ~15minutes
+#run first automated step ~30 minutes
 ./rrk.sh startsetup
 
-#read second step, besides gui interaction its only 6 cli steps
+#read second step, besides gui interaction its only 6 cli steps ~10 minutes
 ./rrk.sh modifykodirw
 
-#run third step and answer y n n n y n
+#run third step and answer y n n n y n ~5 minutes
 ./rrk.sh finishkodiro
 
 #after this you have a functional but still unconfigured sdcard
