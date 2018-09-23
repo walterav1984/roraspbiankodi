@@ -85,14 +85,15 @@ HTSHTSP=9982
 _EOF_
 
 sudo tee -a /boot/settings/PVRTYPE.txt <<_EOF_
-#Uncomment only a single kodi PVR frontend: 'tvheadend' is default
-tvheadend
+#Uncomment only a single kodi PVR frontend: 'none' is default
+none
+#tvheadend
 #hdhomerun
 #itsclient
 _EOF_
 
 sudo tee -a /boot/settings/ISCCONF.txt <<_EOF_
-#Uncomment only a single iptvsimpleclient setting: 'remote' or 'loca 'is default
+#Uncomment only a single iptvsimpleclient setting: 'remote' or 'local' is default
 local=/boot/settings/playlist.m3u
 #remote=http://example.io/atom.m3u
 _EOF_
@@ -675,7 +676,7 @@ the first pvr addon will get lost!
 
 Keep in mind diskspace/ram usage since the whole .kodi folder will stay in ram
 when its in read-only mode! Especially avoid addons that build huge thumbcaches!
-To check kodi folder size type 'du -hcs ~.kodi' those are MB of RAM starving!
+To check kodi folder size type 'du -hcs ~/.kodi' those are MB of RAM starving!
 
 Final warning do not configure/change settings in the enabled PVR-addons nor
 changes in the audio output since otherwise /boot/setting configurations fail 
@@ -750,7 +751,7 @@ You are done just reboot!
 }
 
 function joystickcontroller {
-#buttonmaps for classic- v1/v2/logitech & modern- 360 xbpx wired usb controllers 
+#buttonmaps for classic- v1/v2/logitech & modern- 360 xbox wired usb controllers 
 mkdir ~/.kodi/userdata/addon_data/peripheral.joystick/resources/buttonmaps/xml/linux
 mkdir ~/.kodi/userdata/peripheral_data
 
