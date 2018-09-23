@@ -23,7 +23,7 @@ chmod +x rrk.sh
 #run first automated step ~30 minutes
 ./rrk.sh startsetup
 
-#read second step, besides gui interaction its only 6 cli steps ~10 minutes
+#read second step, besides gui interaction its only 2 cli commands repeated 4 times ~10 minutes
 ./rrk.sh modifykodirw
 
 #run third step and answer y n n n y n ~5 minutes
@@ -63,15 +63,22 @@ Finally in step four edit /boot/settings/*.conf files to you need, these setting
 
 This was just a summary/proof of concept but usable since kodi 18 does some major code rewrites including a retrogame api don't expect much improvements.
 
+## region/time/language
+Since the image is Dutch/european DVB pal video standard focused 25i/50i/25p/50p the native KODI resolution/refreshrate are set/forced see config.txt! Change it there for US/Japan ntsc if you want to limit refreshrate adjustment blackscreens between video playback and kodi menu interaction. Also other settings like time/keyboard language are setup while creating the readonly system, maybe in future there will be a way to override readonly region related behaviour with settings.txt file.
+
 ## TODO
 * audio Analogue raspberry pop tick crackle
+* composite sdtv aspect ratio pal incorrect #ntsc ok, kodi isssue?
+* sdtv aspect ratio config.txt no effect raspberry firmware issue?
+* composite sdtv audio/video stutter no smooth playback
+* composite sdtv tty/console shows behind movie playback
+* startupscreen tvlist descend / ascend order ?
 * retrogame backend wait for kodi 18
-* vcgencmd measure_clock pixel #sync to display adjust rerfreshrate?
-* startupscreen tvlist?
-* ir remote?ir-keytable inputlirc r-keytable -r ir-keytable -t
 
 ## Debug/Think
 ```
+vcgencmd measure_clock pixel #sync to display adjust rerfreshrate?
+tvservice -s #shows resolution / aspect-ratio
 /opt/vc/bin/tvservice -p
 /opt/vc/bin/tvservice -o
 echo "standby 0" | cec-client RPI -s -d 1
