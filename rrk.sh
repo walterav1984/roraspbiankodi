@@ -1,4 +1,5 @@
 #!/bin/bash
+
 #
 # rrk.sh roraspbiankodi
 #
@@ -45,9 +46,13 @@ hdmi_group=1
 hdmi_mode=31
 #hdmi_pixel_encoding=0
 
+#uncomment following single line for enabling single IR receiver
+#dtoverlay=gpio-ir
+
+#uncomment following 3 lines for PiFi DAC+ v2.0 with builtin IR receiver
 #dtparam=i2s=on
 #dtoverlay=hifiberry-dacplus
-#dtoverlay=lirc-rpi:gpio_in_pin=26
+#dtoverlay=gpio-ir,gpio_pin=26
 _EOF_
 #vcgencmd get_mem arm && vcgencmd get_mem gpu #check memory split
 
@@ -59,7 +64,7 @@ sudo sed -i "s/52 6/52 3/g" /etc/crontab
 }
 
 function setlocaldefaults {
-sudo sed -i "s/uk/us/g" /etc/default/keyboard
+sudo sed -i "s/gb/us/g" /etc/default/keyboard
 sudo timedatectl set-timezone Europe/Amsterdam
 #timedate-ctl list-timezones
 }
@@ -145,6 +150,10 @@ cat <<'_EOF_' > /home/pi/setpvr.sh
 #!/bin/bash
 #Overwrite Addons27.db database for enforcing a single active kodi PVR frontend
 case $(cat /boot/settings/PVRTYPE.txt | grep -v '#') in
+	none)
+	echo "[  OK  ] setpvr.sh no pvr addon selected"
+	cp /home/pi/nonAddons27.db /tmp/kodirw/userdata/Database/Addons27.db
+	;;
 	tvheadend)
 	echo "[  OK  ] setpvr.sh sets tvheadend"
 	cp /home/pi/htsAddons27.db /tmp/kodirw/userdata/Database/Addons27.db
@@ -310,6 +319,7 @@ RestartSec = 5
 WantedBy = multi-user.target
 _EOF_
 
+#Start kodi first time to setup user profile folder structure 
 sudo systemctl enable kodi.service
 sudo systemctl disable kodi.service
 
@@ -665,12 +675,19 @@ the first pvr addon will get lost!
 
 Keep in mind diskspace/ram usage since the whole .kodi folder will stay in ram
 when its in read-only mode! Especially avoid addons that build huge thumbcaches!
+To check kodi folder size type 'du -hcs ~.kodi' those are MB of RAM starving!
 
 Final warning do not configure/change settings in the enabled PVR-addons nor
 changes in the audio output since otherwise /boot/setting configurations fail 
 to apply!
 
 ################################################################################
+
+sudo systemctl start kodi.service
+#setup kodi&addons as usual but before enabling the first pvr addon exit kodi
+#
+#if kodi has been exited create a backup of the addon database with none pvr!
+sudo cp -a /home/pi/.kodi/userdata/Database/Addons27.db /home/pi/nonAddons27.db
 
 sudo systemctl start kodi.service
 #setup kodi&addons as usual but after enabling the first pvr-hts addon exit kodi
@@ -714,6 +731,9 @@ echo "[  DO  ] running /home/pi/setaudio.sh"
 /home/pi/setaudio.sh
 echo "[  DO  ] running /home/pi/setpvr.sh"
 /home/pi/setpvr.sh
+echo "[  DO  ] running /home/pi/connectwii.sh"
+/home/pi/connectwii.sh
+
 sync
 sleep 1
 sudo systemctl start kodi.service
@@ -729,12 +749,308 @@ You are done just reboot!
 "
 }
 
+function joystickcontroller {
+#buttonmaps for classic- v1/v2/logitech & modern- 360 xbpx wired usb controllers 
+mkdir ~/.kodi/userdata/addon_data/peripheral.joystick/resources/buttonmaps/xml/linux
+mkdir ~/.kodi/userdata/peripheral_data
+
+cat <<'_EOF_' > ~/.kodi/userdata/addon_data/peripheral.joystick/resources/buttonmaps/xml/linux/Logitech_Compact_Controller_for_Xbox_10b_8a.xml
+<?xml version="1.0" ?>
+<buttonmap>
+    <device name="Logitech Compact Controller for Xbox" provider="linux" buttoncount="10" axiscount="8">
+        <configuration>
+            <axis index="2" center="-1" range="2" />
+            <axis index="5" center="-1" range="2" />
+        </configuration>
+        <controller id="game.controller.default">
+            <feature name="a" button="0" />
+            <feature name="b" button="1" />
+            <feature name="back" button="6" />
+            <feature name="down" axis="+7" />
+            <feature name="left" axis="-6" />
+            <feature name="leftbumper" button="5" />
+            <feature name="leftstick">
+                <up axis="-1" />
+                <down axis="+1" />
+                <right axis="+0" />
+                <left axis="-0" />
+            </feature>
+            <feature name="leftthumb" button="8" />
+            <feature name="lefttrigger" axis="+2" />
+            <feature name="right" axis="+6" />
+            <feature name="rightbumper" button="2" />
+            <feature name="rightstick">
+                <up axis="-4" />
+                <down axis="+4" />
+                <right axis="+3" />
+                <left axis="-3" />
+            </feature>
+            <feature name="rightthumb" button="9" />
+            <feature name="righttrigger" axis="+5" />
+            <feature name="start" button="7" />
+            <feature name="up" axis="-7" />
+            <feature name="x" button="3" />
+            <feature name="y" button="4" />
+        </controller>
+    </device>
+</buttonmap>
+_EOF_
+
+# set global deadzone for all controller to 0.8 since the slightest stick offset 
+# will hang/repeat unwanted input and make GUI unresponsive!
+
+#cat <<'_EOF_' > ~/.kodi/userdata/peripheral_data/addon_Logitech_Compact_Controller_for_Xbox.xml
+#addon_Microsoft_X-Box_pad_v1_(US)
+#addon_Microsoft_X-Box_pad_v2_(US)
+#addon_Microsoft_X-Box_360_pad
+#<settings>
+#    <setting id="left_stick_deadzone" value="0.90" />
+#    <setting id="right_stick_deadzone" value="0.90" />
+#</settings>
+#_EOF_
+
+cat <<'_EOF_' > ~/.kodi/userdata/addon_data/peripheral.joystick/resources/buttonmaps/xml/linux/Microsoft_X-Box_pad_v1_US_10b_8a.xml
+<?xml version="1.0" ?>
+<buttonmap>
+    <device name="Microsoft X-Box pad v1 (US)" provider="linux" buttoncount="10" axiscount="8">
+        <configuration>
+            <axis index="2" center="-1" range="2" />
+            <axis index="5" center="-1" range="2" />
+        </configuration>
+        <controller id="game.controller.default">
+            <feature name="a" button="0" />
+            <feature name="b" button="1" />
+            <feature name="back" button="6" />
+            <feature name="down" axis="+7" />
+            <feature name="left" axis="-6" />
+            <feature name="leftbumper" button="5" />
+            <feature name="leftstick">
+                <up axis="-1" />
+                <down axis="+1" />
+                <right axis="+0" />
+                <left axis="-0" />
+            </feature>
+            <feature name="leftthumb" button="8" />
+            <feature name="lefttrigger" axis="+2" />
+            <feature name="right" axis="+6" />
+            <feature name="rightbumper" button="2" />
+            <feature name="rightstick">
+                <up axis="-4" />
+                <down axis="+4" />
+                <right axis="+3" />
+                <left axis="-3" />
+            </feature>
+            <feature name="rightthumb" button="9" />
+            <feature name="righttrigger" axis="+5" />
+            <feature name="start" button="7" />
+            <feature name="up" axis="-7" />
+            <feature name="x" button="3" />
+            <feature name="y" button="4" />
+        </controller>
+    </device>
+</buttonmap>
+_EOF_
+
+cat <<'_EOF_' > ~/.kodi/userdata/addon_data/peripheral.joystick/resources/buttonmaps/xml/linux/Microsoft_X-Box_pad_v2_US_10b_8a.xml
+<?xml version="1.0" ?>
+<buttonmap>
+    <device name="Microsoft X-Box pad v2 (US)" provider="linux" buttoncount="10" axiscount="8">
+        <configuration>
+            <axis index="2" center="-1" range="2" />
+            <axis index="5" center="-1" range="2" />
+        </configuration>
+        <controller id="game.controller.default">
+            <feature name="a" button="0" />
+            <feature name="b" button="1" />
+            <feature name="back" button="6" />
+            <feature name="down" axis="+7" />
+            <feature name="left" axis="-6" />
+            <feature name="leftbumper" button="5" />
+            <feature name="leftstick">
+                <up axis="-1" />
+                <down axis="+1" />
+                <right axis="+0" />
+                <left axis="-0" />
+            </feature>
+            <feature name="leftthumb" button="8" />
+            <feature name="lefttrigger" axis="+2" />
+            <feature name="right" axis="+6" />
+            <feature name="rightbumper" button="2" />
+            <feature name="rightstick">
+                <up axis="-4" />
+                <down axis="+4" />
+                <right axis="+3" />
+                <left axis="-3" />
+            </feature>
+            <feature name="rightthumb" button="9" />
+            <feature name="righttrigger" axis="+5" />
+            <feature name="start" button="7" />
+            <feature name="up" axis="-7" />
+            <feature name="x" button="3" />
+            <feature name="y" button="4" />
+        </controller>
+    </device>
+</buttonmap>
+_EOF_
+
+cat <<'_EOF_' > ~/.kodi/userdata/addon_data/peripheral.joystick/resources/buttonmaps/xml/linux/Microsoft_X-Box_360_pad_11b_8a.xml
+<?xml version="1.0" ?>
+<buttonmap>
+    <device name="Microsoft X-Box 360 pad" provider="linux" buttoncount="11" axiscount="8">
+        <configuration>
+            <axis index="2" center="-1" range="2" />
+            <axis index="5" center="-1" range="2" />
+        </configuration>
+        <controller id="game.controller.default">
+            <feature name="a" button="0" />
+            <feature name="b" button="1" />
+            <feature name="back" button="6" />
+            <feature name="down" axis="+7" />
+            <feature name="guide" button="8" />
+            <feature name="left" axis="-6" />
+            <feature name="leftbumper" button="4" />
+            <feature name="leftstick">
+                <up axis="-1" />
+                <down axis="+1" />
+                <right axis="+0" />
+                <left axis="-0" />
+            </feature>
+            <feature name="leftthumb" button="9" />
+            <feature name="lefttrigger" axis="+2" />
+            <feature name="right" axis="+6" />
+            <feature name="rightbumper" button="5" />
+            <feature name="rightstick">
+                <up axis="-4" />
+                <down axis="+4" />
+                <right axis="+3" />
+                <left axis="-3" />
+            </feature>
+            <feature name="rightthumb" button="10" />
+            <feature name="righttrigger" axis="+5" />
+            <feature name="start" button="7" />
+            <feature name="up" axis="-7" />
+            <feature name="x" button="2" />
+            <feature name="y" button="3" />
+        </controller>
+    </device>
+</buttonmap>
+_EOF_
+
+#adjust generic joystick deadzone level to reduce false/freezing/repeating input 
+sudo sed -i 's/value="0.2"/value="0.8"/g' /usr/share/kodi/system/peripherals.xml
+}
+
+function joywii {
+sudo tee -a /boot/settings/WIIMOTE.txt <<_EOF_
+#Discover WiiMote macaddress with 'hcitool scan' while pressing 1&2 buttons!
+#uncomment and replace the macaddress below with the one you discovered! 
+#wiimacaddress=FF:FF:FF:FF:FF:FF
+_EOF_
+
+sudo apt-get -y install lswm wminput #kodi-eventclients-wii?
+echo 'KERNEL=="uinput", MODE="0666"' | sudo tee /etc/udev/rules.d/wiimote.rules
+cat <<'_EOF_' > ~/wminput1
+#WiiMote
+Wiimote.A = BTN_A
+Wiimote.B = BTN_B
+Wiimote.Dpad.X = ABS_Y
+Wiimote.Dpad.Y = -ABS_X
+Wiimote.Minus = BTN_SELECT
+Wiimote.Plus = BTN_START
+Wiimote.Home = BTN_MODE
+Wiimote.1 = BTN_X
+Wiimote.2 = BTN_Y
+# Nunchuk
+Nunchuk.C = BTN_C
+Nunchuk.Z = BTN_Z
+Plugin.led.Led1 = 1
+#Plugin.led.Led2 = 1
+Plugin.led.Led3 = 1
+#Plugin.led.Led4 = 1
+_EOF_
+
+cat <<'_EOF_' > ~/connectwii.sh
+#!/bin/bash
+sleep 1 # Wait until Bluetooth services are fully initialized
+#detect modified mac FF:FF:FF:FF:FF:FF otherwise service won't start?
+case $(cat /boot/settings/WIIMOTE.txt | grep -v '#' | sed -e 's/=.*//' -) in
+    wiimacaddress)
+    hcitool dev | grep hci >/dev/null
+    if test $? -eq 0 ; then
+        WIIMAC=$(cat /boot/settings/WIIMOTE.txt | grep -v '#' | grep wiimacaddress | sed -e 's/wiimacaddress=//g' -)
+        wminput -q -d -c  /home/pi/wminput1 $WIIMAC > /dev/null 2>&1 &
+        echo "[  OK  ] connect Wiimote press 1+2 button!"
+    else
+        echo "[  NO  ] failed Wiimote no bluetooth adapter!"
+        exit 0
+    fi
+    ;;
+esac
+exit 0
+_EOF_
+
+chmod +x ~/connectwii.sh
+
+#sudo service udev restart
+#sudo modprobe uinput #requires reboot because current outdated kernel missed
+
+#sudo sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd$|ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=sap|' /lib/systemd/system/bluetooth.service
+#sudo adduser pi bluetooth
+#hciutil scan #find mac address of wiimote(press 1+2 buttons simultanious to detect and connect)
+
+cat <<'_EOF_' > ~/.kodi/userdata/addon_data/peripheral.joystick/resources/buttonmaps/xml/linux/Nintendo_Wiimote_9b_2a.xml
+<?xml version="1.0" ?>
+<buttonmap>
+    <device name="Nintendo Wiimote" provider="linux" buttoncount="9" axiscount="2">
+        <configuration />
+        <controller id="game.controller.gba">
+            <feature name="a" button="0" />
+            <feature name="b" button="1" />
+            <feature name="down" axis="+0" />
+            <feature name="left" axis="-1" />
+            <feature name="leftbumper" button="6" />
+            <feature name="right" axis="+1" />
+            <feature name="rightbumper" button="7" />
+            <feature name="select" button="4" />
+            <feature name="start" button="3" />
+            <feature name="up" axis="-0" />
+        </controller>
+    </device>
+</buttonmap>
+_EOF_
+}
+
+function gpioirlirc {
+sudo apt-get -y install ir-keytable evtest lirc #inputlirc==eventlird
+#disable inputloop to fix repeating button presses
+sudo systemctl stop lircd-uinput
+sudo systemctl disable lircd-uinput
+#sudo systemctl stop lircd
+#rc_maps keyfile libreelecmulti?
+#sudo ir-keytable -t #test remote input via kernel
+#sudo evtest
+#sudo systemctl start lircd
+#sudo irw #test remote input via lirc
+#cat /proc/bus/input/devices
+echo 'KERNEL=="event*",ATTRS{name}=="gpio_ir_recv",SYMLINK="input/irremote"' | sudo tee /etc/udev/rules.d/10-persistent-ir.rules
+cp /usr/share/kodi/system/Lircmap.xml ~/.kodi/userdata/
+sed -i "s|<altname>cx23885_remote</altname>|<altname>/dev/input/irremote</altname>|g" ~/.kodi/userdata/Lircmap.xml
+sed -i "s|<title>KEY_EPG</title>|<guide>KEY_EPG</guide>|g" ~/.kodi/userdata/Lircmap.xml
+sudo systemctl restart udev
+sudo udevadm trigger
+sudo systemctl restart lircd
+
+}
+
 function startsetup {
 firstbootupgrades
 performancetweaks
 setlocaldefaults
 extraconfigs
 installkodi
+joystickcontroller
+joywii
+gpioirlirc
 }
 
 $ACTIONIS
