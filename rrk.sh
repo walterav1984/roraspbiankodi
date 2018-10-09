@@ -64,6 +64,7 @@ sudo sed -i "s/52 6/52 3/g" /etc/crontab
 }
 
 function setlocaldefaults {
+#Can be set later on boot partition with help os pfixtz.sh
 sudo sed -i "s/gb/us/g" /etc/default/keyboard
 sudo timedatectl set-timezone Europe/Amsterdam
 #timedate-ctl list-timezones
@@ -72,6 +73,31 @@ sudo timedatectl set-timezone Europe/Amsterdam
 function extraconfigs {
 #/boot partition config files for overiding readonly system and kodi behaviour 
 sudo mkdir /boot/settings
+
+#persistent keyboard language/layout config
+sudo mv /etc/default/keyboard /boot/settings/keyboard
+sudo ln -s /boot/settings/keyboard /etc/default/keyboard
+
+sudo tee -a /boot/settings/KODIRDF.txt <<_EOF_
+#Uncomment a single regional format for correct clock/date/temperature notation!
+#Australia (12h)
+#Australia (24h)
+#Canada
+Central Europe
+#India (12h)
+#India (24h)
+#UK (12h)
+#UK (24h)
+#USA (12h)
+#USA (24h) 
+_EOF_
+
+sudo tee -a /boot/settings/TIMEZONE.txt <<_EOF_
+Uncomment single Timezone/Country/Region notice Europe/Amsterdam is uncommented!
+_EOF_
+sudo timedatectl list-timezones >> /boot/settings/TIMEZONE.txt
+sudo sed -i 's|^|#|' /boot/settings/TIMEZONE.txt
+sudo sed -i 's|#Europe/Amsterdam|Europe/Amsterdam|' /boot/settings/TIMEZONE.txt
 
 sudo tee -a /boot/settings/HTSCONF.txt <<_EOF_
 #TVHeadend Credentials uncomment&edit HTSNFSF for nfsshare folder on HTSSERV 
@@ -297,10 +323,55 @@ esac
 _EOF_
 chmod +x /home/pi/setnfs.sh
 
+cat <<'_EOF_' > /home/pi/setrdf.sh
+#!/bin/bash
+#set kodi regional default format
+
+DTZ=$(cat /boot/settings/TIMEZONE.txt | grep -v '#')
+KRDF=$(cat /boot/settings/KODIRDF.txt | grep -v '#')
+
+#<timezone default="true">Europe/Amsterdam</timezone>
+#<country>Central Europe</country>
+
+sed -i -e "s|Europe/Amsterdam|$DTZ|g" /tmp/kodirw/userdata/guisettings.xml
+sed -i -e "s/Central Europe/$KRDF/g" /tmp/kodirw/userdata/guisettings.xml
+_EOF_
+chmod +x /home/pi/setrdf.sh
+
+cat <<'_EOF_' > /home/pi/pfixtz.sh
+#!/bin/bash
+# login with ssh on pi to permanent fix timezone with rw rootfs access
+
+# manually sudo dpkg-reconfigure tzdata
+# sudo timedatectl set-timezone X/Y
+# symlink /etc/localtime to /usr/share/zoneinfo/X/Y binary file
+# /etc/timezone ascii readable
+
+sudo systemctl stop kodi
+sleep 5
+
+sudo mount -o remount,rw /
+sleep 5
+
+DTZ=$(cat /boot/settings/TIMEZONE.txt | grep -v '#')
+KRDF=$(cat /boot/settings/KODIRDF.txt | grep -v '#')
+
+sudo timedatectl set-timezone $DTZ
+sync
+sudo timedatectl set-timezone $DTZ
+sync
+
+sudo mount -o remount,ro /
+
+sudo reboot;exit
+
+_EOF_
+chmod +x /home/pi/pfixtz.sh
+
 }
 
 function installkodi {
-sudo apt-get -y install kodi kodi-pvr-hts kodi-pvr-hdhomerun kodi-pvr-iptvsimple kodi-peripheral-joystick kodi-inputstream-adaptive kodi-inputstream-rtmp
+sudo apt-get -y install kodi kodi-pvr-hts kodi-pvr-hdhomerun kodi-pvr-iptvsimple kodi-peripheral-joystick kodi-inputstream-adaptive kodi-inputstream-rtmp cec-utils
 #Create a kodi service https://www.raspberrypi.org/forums/viewtopic.php?f=66&t=192499
 sudo tee -a /lib/systemd/system/kodi.service <<_EOF_
 [Unit]
@@ -732,6 +803,8 @@ echo "[  DO  ] running /home/pi/setaudio.sh"
 /home/pi/setaudio.sh
 echo "[  DO  ] running /home/pi/setpvr.sh"
 /home/pi/setpvr.sh
+echo "[  DO  ] running /home/pi/setrdf.sh"
+/home/pi/setrdf.sh
 echo "[  DO  ] running /home/pi/connectwii.sh"
 /home/pi/connectwii.sh
 
